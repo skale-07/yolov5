@@ -1,0 +1,21 @@
+# Exclude Python virtual environments
+venv/
+
+# Exclude local packages directory
+packages/
+
+# Exclude docs and tests
+docs/
+tests/
+
+# Exclude build artifacts
+*.log
+*.tmp
+*.bak
+
+.git/
+venv/
+*.tar.gz
+*.whl
+__pycache__/
+tests/
