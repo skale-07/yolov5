@@ -1,17 +1,12 @@
 {
-  "AWSEBDockerrunVersion": 2,
-  "containerDefinitions": [
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "tdewangan63/snapsort-deployment:latest",
+    "Update": "true"
+  },
+  "Ports": [
     {
-      "name": "web",
-      "image": "your-dockerhub-username/your-repo-name:latest",
-      "essential": true,
-      "memory": 512,
-      "portMappings": [
-        {
-          "containerPort": 80,
-          "hostPort": 80
-        }
-      ]
+      "ContainerPort": "8080"
     }
   ]
 }

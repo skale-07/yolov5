@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build: .
+    container_name: flask-app
+    ports:
+      - "8080:8080"  # Map external port 8080 to internal port 8080
+    volumes:
+      - .:/app  # Mount the local directory to the container's /app directory
+    environment:
+      - FLASK_ENV=development  # Set environment variable for development mode
+      - PORT=8080  # Pass the PORT variable for Firebase/Gunicorn
+    command: gunicorn --bind :8080 --workers 1 --threads 8 app:app
+    depends_on:
+      - redis  # Ensure Redis starts before the Flask app
+
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+    ports:
+      - "6379:6379"  # Redis runs on port 6379

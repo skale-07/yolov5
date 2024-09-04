@@ -4,68 +4,347 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload and Sort Photos - SnapSort</title>
-    <link rel='stylesheet' href='style.css'>
-    <script src='script.js'></script>
+    <style>
+        /* Your CSS styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: left;
+            height: 100vh;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 200px;
+            background-color: #e0f7fa;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .container {
+            margin-left: 200px;
+            width: calc(100% - 200px);
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+        .upload-btn {
+            font-size: 1em;
+            padding: 5px 10px;
+            margin: 5px 0;
+            border: 5px solid black;
+            cursor: pointer;
+        }
+        .sort-btn, .button, .delete-btn {
+            font-size: 1.5em;
+            margin: 20px 0;
+            cursor: pointer;
+            border: 2px solid #ff4081;
+            background-color: transparent;
+            padding: 10px 5px;
+            color: #ff4081;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .sort-btn:hover, .button:hover, .delete-btn:hover {
+            background-color: #ff4081;
+            color: white;
+        }
+        .folders {
+            margin-top: 20px;
+        }
+        .folder {
+            display: inline-block;
+            margin: 10px;
+            padding: 20px;
+            border: 1px dashed #ccc;
+            border-radius: 5px;
+        }
+        .flashes {
+            color: red;
+        }
+        input[type=range] {
+            width: 100%;
+        }
+        .uploaded-images {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            padding-left: 0;
+            width: 100%;
+        }
+        .uploaded-image {
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-end;
+            flex-direction: column;
+            cursor: pointer;
+        }
+        .uploaded-image img.selected {
+            border: 4px solid #ff4081;
+            margin: -4px;
+        }
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            margin-top: 5%;
+        }
+        .checkbox-label-container {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-label-container input[type=checkbox] {
+            margin-right: 10px;
+        }
+
+        .popup {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            width: 80%;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        .reference-images {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .reference-image {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .reference-image img {
+            width: 150px;
+            height: auto;
+            cursor: pointer;
+        }
+
+        .reference-image img.selected {
+            border: 4px solid #ff4081;
+            margin: -4px;
+        }
+
+        .popup-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .popup-buttons button {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/get_common_objects')
+                .then(response => response.json())
+                .then(data => {
+                    const commonObjects = data.common_objects;
+                    const dropdown = document.getElementById('object-dropdown');
+                    dropdown.innerHTML = '<option value="" disabled selected>Select an object</option>';
+                    commonObjects.forEach(object => {
+                        const option = document.createElement('option');
+                        option.value = object;
+                        option.textContent = object;
+                        dropdown.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        let lastClickedImage = null;
+
+        function toggleSelection(imgElement) {
+            if (!lastClickedImage || !event.shiftKey) {
+                imgElement.classList.toggle('selected');
+                if (imgElement.classList.contains('selected')) {
+                    lastClickedImage = imgElement;
+                }
+            } else {
+                const images = Array.from(document.querySelectorAll('.uploaded-photos img'));
+                let startIndex = images.indexOf(lastClickedImage);
+                let endIndex = images.indexOf(imgElement);
+                let [from, to] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+                for (let i = from; i <= to; i++) {
+                    images[i].classList.add('selected');
+                }
+            }
+        }
+
+        function logSelectedImages() {
+            const selectedImages = Array.from(document.querySelectorAll('.uploaded-photos img.selected')).map(img => img.src);
+            console.log(selectedImages);
+        }
+
+        function clearSelectedImages() {
+            const selectedImages = Array.from(document.querySelectorAll('.uploaded-photos img.selected')).map(img => img.src);
+            fetch('/clear_selected', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ imagePaths: selectedImages }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message);
+                selectedImages.forEach(imgSrc => {
+                    const imgElement = document.querySelector(`img[src="${imgSrc}"]`);
+                    if (imgElement) imgElement.remove();
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function downloadSelectedImages() {
+            const selectedImages = Array.from(document.querySelectorAll('.uploaded-photos img.selected')).map(img => img.src);
+            selectedImages.forEach(imgSrc => {
+                const link = document.createElement('a');
+                link.href = imgSrc;
+                link.download = imgSrc.split('/').pop();
+                link.click();
+            });
+        }
+
+        function updateSliderValue(value) {
+            document.getElementById('slider-value').textContent = value;
+            document.getElementById('hidden-slider').value = value;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var deleteButton = document.getElementById('delete-all-btn');
+            if(deleteButton) {
+                deleteButton.addEventListener('click', function(event) {
+                    var dropdown = document.getElementById('object-dropdown');
+                    while (dropdown.firstChild) {
+                        dropdown.removeChild(dropdown.firstChild);
+                    }
+                    console.log('Dropdown reset'); // Log to the console
+
+                    // Send a request to the server to clear the session data
+                    fetch('/clear_objects', {
+                        method: 'POST',
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data.message);
+                    })
+                    .catch(error => console.error('Error:', error));
+
+                    return false; // Prevent the form from being submitted
+                });
+            } else {
+                console.log('Delete button not found');
+            }
+        });
+
+        function openPopup() {
+            const popup = document.getElementById('facialDetectionPopup');
+            const container = document.getElementById('referenceImagesContainer');
+            container.innerHTML = ''; // Clear existing images
+
+            // Fetch reference images from the backend
+            fetch('/load_reference_images')
+                .then(response => response.json())
+                .then(data => {
+                    // Check if reference_images is false
+                    data.reference_images.forEach((imagePath, index) => {
+                        const div = document.createElement('div');
+                        div.classList.add('reference-image');
+
+                        const img = document.createElement('img');
+                        img.src = imagePath;
+                        img.alt = `Reference ${index + 1}`;
+                        img.onclick = () => toggleSelection(img);
+
+                        div.appendChild(img);
+                        container.appendChild(div);
+                    });
+                    popup.style.display = 'flex';
+                })
+                .catch(error => console.error('Error loading reference images:', error));
+        }
+
+        function closePopup() {
+            const popup = document.getElementById('facialDetectionPopup');
+            popup.style.display = 'none';
+        }
+
+        {#function confirmSelection() {#}
+        {#    const selectedImages = Array.from(document.querySelectorAll('.reference-image img.selected')).map(img => img.src);#}
+        {#    document.getElementById('selected-faces').value = JSON.stringify(selectedImages);#}
+
+        function confirmSelection() {
+            const selectedImages = Array.from(document.querySelectorAll('.reference-image img.selected')).map(img => img.src);
+            const selectedFaces = selectedImages.map(imgSrc => imgSrc.split('/').pop()); // Extract the filenames
+
+            fetch('/sort_by_selected_faces', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ selectedFaces: selectedFaces }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.message); // Handle success message
+                // You can redirect or update the UI here based on the sorted images
+                if (data.redirect) {
+                    window.location.href = data.redirect; // Redirect if necessary
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+
+
+        function checkFacialDetection() {
+            const facialDetectionCheckbox = document.getElementById('facial-detection-checkbox');
+            if (facialDetectionCheckbox.checked) {
+                openPopup();
+            }
+        }
+
+        window.onload = function() {
+            document.getElementById('facial-detection-checkbox').addEventListener('change', checkFacialDetection);
+        };
+    </script>
 </head>
 <body>
-    <!--Sidebar Code-->
     <div class="sidebar">
         <form action="/" method="post" enctype="multipart/form-data">
             <label for="file-input" class="upload-btn">Upload Photos</label>
             <input id="file-input" type="file" name="file[]" multiple style="display: none;" onchange="this.form.submit()">
         </form>
-
         <form id="delete-form" action="/delete_all" method="POST">
             <input type="submit" value="Delete All Photos" class="delete-btn" id="delete-all-btn">
         </form>
-
-        <form action="sort_by_object" method="post">
-            <select id="object-dropdown" name="object">
-                <option value="" disabled selected>Loading objects...</option>
-            </select>
-            <button type="submit" class="sort-btn">Sort by Object</button>
-        </form>
-
-        <form action="/sort_by_important_objects" method="post">
-            <div class="slider-container">
-                <label for="slider">Number of Important Objects:</label>
-                <input type="range" id="slider" min="1" max="10" value="5" oninput="updateSliderValue(this.value)">
-                <span id="slider-value">5</span>
-                <input type="hidden" id="hidden-slider" name="important_objects" value="5">
-            </div>
-            <button type="submit" class="sort-btn">Sort by Important Objects</button>
-        </form>
-
-        <form action="/sort_by_faces" method="post">
-            <label>
-                <input type="checkbox" id="facial-detection-checkbox" name="facial-detection" value="yes"> Facial Detection
-            </label>
-            <button type="submit" class="sort-btn">Sort by Faces</button>
-        </form>
-
-        <button onclick="downloadSelectedImages()" class="button">Download Selected Images</button>
-        <button onclick="clearSelectedImages()" class="button">Delete Selected Images</button>
-        <button onclick="logSelectedImages()" class="button">Log Selected Images</button>
-    </div>
-
-    <div class="container">
-        <div class="uploaded-images">
-            <!--Uplodaded images should be displayed here dynamically-->
-        </div>
-
-        <!-- Facial Detection Popup -->
-        <div id="facialDetectionPopup" class="popup">
-            <div class="popup-content">
-                <h2>Select Reference Images for Facial Detection</h2>
-                <div id="referenceImagesContainer" class="reference-images"></div>
-                <div class="popup-buttons">
-                    <button onclick="confirmSelection()">Confirm</button>
-                    <button onclick="closePopup()">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
 
         <form action="/clear_all" method="POST">
             <input type="submit" value="Clear All Photos" class="delete-btn">
@@ -120,6 +399,7 @@
         {% endif %}
     </div>
 
+    <!-- Facial Detection Popup -->
     <div class="popup" id="facialDetectionPopup">
         <div class="popup-content">
             <h3>Select Reference Faces</h3>

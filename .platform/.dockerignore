@@ -1,0 +1,67 @@
+# Ignore the following files and directories
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Packages
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+var/
+sdist/
+wheels/
+.installed.cfg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook files
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm project settings
+.idea/
+*.iml
+
+# AWS Elastic Beanstalk specific files
+.elasticbeanstalk/
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Miscellaneous
+*.DS_Store
+*.log
